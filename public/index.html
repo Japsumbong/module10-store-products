@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Product CRUD App</title>
+
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background-color: #1b2d20;
+      color: #e6f2ea;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 30px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #a8d5ba;
+    }
+
+    form, .panel {
+      background-color: #243b2e;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      margin-top: 10px;
+      display: block;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 4px;
+      border: none;
+    }
+
+    input {
+      background-color: #e6f2ea;
+    }
+
+    button {
+      background-color: #4f7c5b;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #6fa883;
+    }
+
+    pre {
+      background-color: #0f1a14;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+
+    .product {
+      border-bottom: 1px solid #3f5f4b;
+      padding: 10px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <h1>Products CRUD App</h1>
+
+    <!-- CREATE -->
+    <h2>Create Product</h2>
+    <form id="createForm">
+      <label>Store ID</label>
+      <input id="cStoreId" required />
+
+      <label>Store Name</label>
+      <input id="cStoreName" required />
+
+      <label>Product ID</label>
+      <input id="cProductId" required />
+
+      <label>Product Name</label>
+      <input id="cProductName" required />
+
+      <label>Price</label>
+      <input id="cPrice" type="number" step="0.01" required />
+
+      <button type="submit">Create Product</button>
+    </form>
+
+    <!-- GET ALL -->
+    <h2>Get All Products</h2>
+    <button id="getAllBtn">Fetch All Products</button>
+    <div id="productList" class="panel"></div>
+
+    <!-- GET ONE -->
+    <h2>Get One Product</h2>
+    <form id="getOneForm">
+      <label>Product ID</label>
+      <input id="gProductId" required />
+      <button type="submit">Fetch Product</button>
+    </form>
+
+    <!-- UPDATE -->
+    <h2>Update Product</h2>
+    <form id="updateForm">
+      <label>Product ID</label>
+      <input id="uProductId" required />
+
+      <label>New Product Name</label>
+      <input id="uProductName" />
+
+      <label>New Price</label>
+      <input id="uPrice" type="number" step="0.01" />
+
+      <button type="submit">Update Product</button>
+    </form>
+
+    <!-- DELETE -->
+    <h2>Delete Product</h2>
+    <form id="deleteForm">
+      <label>Product ID</label>
+      <input id="dProductId" required />
+      <button type="submit">Delete Product</button>
+    </form>
+
+    <!-- RAW RESPONSE -->
+    <h2>Raw API Response</h2>
+    <pre id="output">{}</pre>
+
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+    const apiBase = 'http://localhost:3000';
+
+    function show(data) {
+      output.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function renderProducts(products) {
+      const list = document.getElementById('productList');
+      list.innerHTML = '';
+
+      if (products.length === 0) {
+        list.textContent = 'No products found.';
+        return;
+      }
+
+      products.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'product';
+        div.innerHTML = `
+          <strong>${p.productName}</strong><br>
+          Store: ${p.storeName}<br>
+          Product ID: ${p.productId}<br>
+          Price: $${p.price.toFixed(2)}
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    async function send(url, options = {}) {
+      try {
+        const res = await fetch(url, options);
+        const text = await res.text();
+        try {
+          show(JSON.parse(text));
+        } catch {
+          show(text);
+        }
+      } catch (err) {
+        show({ error: err.message });
+      }
+    }
+
+    // CREATE
+    document.getElementById('createForm').addEventListener('submit', e => {
+      e.preventDefault();
+
+      const body = {
+        storeId: cStoreId.value,
+        storeName: cStoreName.value,
+        productId: cProductId.value,
+        productName: cProductName.value,
+        price: Number(cPrice.value)
+      };
+
+      send(`${apiBase}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    });
+
+    // GET ALL
+    document.getElementById('getAllBtn').addEventListener('click', async () => {
+      const res = await fetch(`${apiBase}/products`);
+      const data = await res.json();
+      renderProducts(data);
+      show(data);
+    });
+
+    // GET ONE
+    document.getElementById('getOneForm').addEventListener('submit', e => {
+      e.preventDefault();
+      send(`${apiBase}/products/${gProductId.value}`);
+    });
+
+    // UPDATE
+    document.getElementById('updateForm').addEventListener('submit', e => {
+      e.preventDefault();
+
+      const body = {};
+      if (uProductName.value) body.productName = uProductName.value;
+      if (uPrice.value) body.price = Number(uPrice.value);
+
+      send(`${apiBase}/products/${uProductId.value}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    });
+
+    // DELETE
+    document.getElementById('deleteForm').addEventListener('submit', e => {
+      e.preventDefault();
+      send(`${apiBase}/products/${dProductId.value}`, {
+        method: 'DELETE'
+      });
+    });
+  </script>
+
+</body>
+</html>
