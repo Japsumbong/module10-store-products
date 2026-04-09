@@ -1,29 +1,33 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
 
-// Choose DB from environment variable or fallback
-const dbURI = process.env.DB_URI || 'mongodb://localhost/testdb';
+// Railway + production-safe MongoDB connection
+const dbURI = process.env.MONGODB_URI;
 
-mongoose.connect(dbURI);
+if (!dbURI) {
+  throw new Error('MONGODB_URI is not defined');
+}
+
+mongoose.connect(dbURI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+});
 
 mongoose.connection.on('connected', () => {
-  console.log('Mongoose connected to ' + dbURI);
+  console.log('MongoDB connected');
 });
 
 mongoose.connection.on('error', (err) => {
-  console.log('Mongoose connection error: ' + err);
+  console.error('MongoDB connection error:', err);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('Mongoose disconnected');
+  console.log('MongoDB disconnected');
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-  mongoose.connection.close(() => {
-    console.log('Mongoose disconnected through app termination');
-    process.exit(0);
-  });
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  process.exit(0);
 });
 
 module.exports = mongoose;
